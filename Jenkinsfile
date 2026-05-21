@@ -1,27 +1,28 @@
 pipeline {
     agent { label "Jenkins-Agent" }
     environment {
-              APP_NAME = "register-app-pipeline"
+        APP_NAME = "register-app-pipeline"
     }
 
     stages {
         stage("Cleanup Workspace") {
-            steps {
-                cleanWs()
-            }
+            steps { cleanWs() }
         }
 
         stage("Checkout from SCM") {
-               steps {
-                   git branch: 'main', credentialsId: 'github', url: 'https://github.com/ixsnehith/gitops-register-app.git'
-               }
+            steps {
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/ixsnehith/gitops-register-app.git'
+            }
         }
 
         stage("Update the Deployment Tags") {
             steps {
                 sh """
+                   echo '--- Before replacement ---'
                    cat deployment.yaml
-                   sed -i 's/${APP_NAME}.*/${APP_NAME}:${IMAGE_TAG}/g' deployment.yaml
+                   # Replace only the \${IMAGE_TAG} placeholder with the actual tag
+                   sed -i 's|\\${IMAGE_TAG}|${IMAGE_TAG}|g' deployment.yaml
+                   echo '--- After replacement ---'
                    cat deployment.yaml
                 """
             }
@@ -36,10 +37,9 @@ pipeline {
                    git commit -m "Updated Deployment Manifest" || echo "Nothing to commit"
                 """
                 withCredentials([gitUsernamePassword(credentialsId: 'github', gitToolName: 'Default')]) {
-                  sh "git push https://github.com/ixsnehith/gitops-register-app.git main"
+                    sh "git push https://github.com/ixsnehith/gitops-register-app.git main"
                 }
             }
         }
-      
     }
 }
